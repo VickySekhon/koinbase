@@ -1,10 +1,11 @@
 import mysql.connector
+from mysql.connector import Error
 import os
 from dotenv import load_dotenv
 from tabulate import tabulate
 load_dotenv()
 
-""" 
+"""
 connection = Connection(
     os.getenv("DB_HOST"),
     os.getenv("DB_NAME"),
@@ -23,7 +24,7 @@ class Queries:
      
      # Query 1. Find all investors to send updates to for when an asset falls below their target_price
      def getPriceBelowTarget(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           select w.investor_id, a.symbol, w.target_price, ap.price_per_share
           from Watchlists w
           join Assets a on a.asset_id = w.asset_id
@@ -33,7 +34,7 @@ class Queries:
           
      # Query 2. (x,y) coordinates for an investor's portfolio so that it can be plotted with Chart.js
      def getXYCoordinates(self, account_id):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           select distinct pp.current_price as y,
                row_number() over (order by p.performance_date asc) as x 
           from Performances p
@@ -43,7 +44,7 @@ class Queries:
      
      # Query 3. The portfolio return for a single portfolio
      def getPortfolioReturn(self, account_id):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT CONCAT(FORMAT(ROUND(((p.current_price - ip.initial_price)/ip.initial_price) * 100, 3), 3), '%') AS portfolio_returns
           FROM Performance_Prices p
           JOIN Initial_Prices ip ON ip.account_id = p.account_id
@@ -54,7 +55,7 @@ class Queries:
 
      # Query 4. Total amount invested across all users
      def getTotalAmountInvested(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT CONCAT('$', FORMAT(SUM(p.asset_quantity * ap.price_per_share), 2)) AS total_amount_invested_across_all_portfolios
           FROM Portfolios p
           JOIN Assets a ON p.asset_id = a.asset_id
@@ -63,7 +64,7 @@ class Queries:
 
      # Query 5. The highest amount invested across all portfolios
      def getHighestAmountInvested(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT 
           CONCAT('$', FORMAT(ROUND(MAX(total_portfolio_value), 2), '###,###.##')) AS highest_portfolio_value
           FROM (
@@ -79,7 +80,7 @@ class Queries:
 
      #  Query 6. Divide investors into 4 groups based on the amount of funds they have
      def groupInvestorsByAvailableFunds(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT investor_id, first_name, last_name, funds,
                NTILE(4) OVER (ORDER BY funds DESC) AS fund_quartile
           FROM Investors;
@@ -87,7 +88,7 @@ class Queries:
      
      # Query 7. Investors who have more funds than the average investor
      def investorsWithAboveAverageFunds(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT investor_id, first_name, last_name, funds
           FROM Investors
           WHERE funds > (SELECT AVG(funds) FROM Investors)
@@ -96,7 +97,7 @@ class Queries:
 
      # Query 8. Funds deposited into each investors account by occupation
      def fundsAvailableByOccupation(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT occupation, funds AS total_funds
           FROM Investors
           GROUP BY occupation
@@ -105,7 +106,7 @@ class Queries:
 
      # Query 9. CTE (common table expression) to get total amount of investors' portfolios and rank them based on the total value across all their portfolios
      def rankInvestorPortfolios(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           with Portfoliovalues as ( 
           SELECT 
                account_id, 
@@ -127,7 +128,7 @@ class Queries:
      
      # Advanced query 1. Find the most popular account and the most commonly held asset within that account
      def mostTrendingInvestmentAccount(self):
-          self.connection.executeQuery(f""" 
+          return self.connection.executeQuery(f""" 
           select a_type.account_type, COUNT(*) As count, asst.symbol
           from Accounts a
           join Account_Types a_type on a_type.account_type_id = a.account_type_id
@@ -140,7 +141,7 @@ class Queries:
      
      # Advanced query 2. Most trending buy right now
      def mostTrendingBuy(self):
-          self.connection.executeQuery(f""" 
+          return self.connection.executeQuery(f""" 
           select a.symbol, count(a.asset_id) as count from Carts c
           join Assets a on a.asset_id = c.asset_id
           group by a.asset_id
@@ -150,7 +151,7 @@ class Queries:
      
      # Advanced query 3. City of investors who are making the most transactions
      def cityWithMostTransactions(self):
-          self.connection.executeQuery(f""" 
+          return self.connection.executeQuery(f""" 
           SELECT 
                SUBSTRING_INDEX(SUBSTRING_INDEX(i.home_address, ',', 2), ',', -1) AS city, -- 1st substring_index gives ("street", "city"), 2nd gives ("city")
                COUNT(t.transaction_id) AS transaction_count,
@@ -164,7 +165,7 @@ class Queries:
      
      # Advanced query 4. Number of investors with accounts grouped by age and account_type
      def commonInvestorAccountsByAge(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT 
                TIMESTAMPDIFF(YEAR, i.date_of_birth, CURDATE()) AS age, 
                i.date_of_birth,
@@ -227,7 +228,7 @@ class Queries:
           return True
      
      def subtractFundsFromAccount(self, account_id, cost):
-          self.connection.executeQuery(f"""UPDATE Investors i
+          return self.connection.executeQuery(f"""UPDATE Investors i
                                            JOIN Accounts a ON i.investor_id = a.investor_id
                                            SET i.funds = i.funds - {cost}
                                            WHERE a.account_id = {account_id};""");
@@ -236,19 +237,19 @@ class Queries:
           print(f"Account: {account_id} now has a balance of: ${updatedBalance}.")
      
      def addTransactionRecord(self, account_id, asset_id, asset_quantity, transaction_type):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           insert into Transactions (account_id, asset_id, asset_quantity, transaction_time, transaction_type)
           VALUES ({account_id}, {asset_id}, {asset_quantity}, NOW(), {transaction_type});
           """)
      
      def removeItemFromCart(self, account_id, asset_id):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           delete from Carts
           where account_id = {account_id} and asset_id = {asset_id};
           """)
      
      def updatePortfolioQuantity(self, account_id, asset_id, new_asset_quantity, add: bool):           
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           INSERT INTO Portfolios (account_id, asset_id, asset_quantity)
           VALUES ({account_id}, {asset_id}, {new_asset_quantity})
           ON DUPLICATE KEY UPDATE 
@@ -256,13 +257,13 @@ class Queries:
           """)
      
      def addNewPerformanceEntry(self, account_id, time=None):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           INSERT INTO Performances (account_id, performance_date) 
           ({account_id}, {time if time else "NOW()"})
           """)
           
      def updatePerformancePriceEntry(self, account_id, price_per_share, asset_quantity, add: bool, time=None):
-          self.connection.executeQuery(f"""          
+          return self.connection.executeQuery(f"""          
           INSERT INTO Performance_Prices (account_id, performance_date, current_price) 
           SELECT account_id, {time if time else "NOW()"}, current_price {"+" if add else "-"} ({price_per_share}*{asset_quantity})
           FROM Performance_Prices
