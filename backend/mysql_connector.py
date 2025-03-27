@@ -13,6 +13,8 @@ connection = Connection(
 ) 
 """
 
+# TODO: Change code to prevent SQL injection
+
 class Queries:
      
      def __init__(self, connection):
@@ -23,7 +25,7 @@ class Queries:
      
      # Query 1. Find all investors to send updates to for when an asset falls below their target_price
      def getPriceBelowTarget(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           select w.investor_id, a.symbol, w.target_price, ap.price_per_share
           from Watchlists w
           join Assets a on a.asset_id = w.asset_id
@@ -33,17 +35,17 @@ class Queries:
           
      # Query 2. (x,y) coordinates for an investor's portfolio so that it can be plotted with Chart.js
      def getXYCoordinates(self, account_id):
-          self.connection.executeQuery(f"""
-          select distinct pp.current_price as y,
-               row_number() over (order by p.performance_date asc) as x 
-          from Performances p
-          join Performance_Prices pp on pp.account_id = p.account_id and pp.performance_date = p.performance_date
-          where p.account_id = {account_id};
+          return self.connection.executeQuery(f"""
+          SELECT DISTINCT pp.current_price AS y, ROW_NUMBER() OVER (ORDER BY p.performance_date ASC) AS x 
+          FROM Performances p
+          JOIN Performance_Prices pp ON pp.account_id = p.account_id 
+          AND pp.performance_date = p.performance_date
+          WHERE p.account_id = {account_id};
           """)
      
      # Query 3. The portfolio return for a single portfolio
      def getPortfolioReturn(self, account_id):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT CONCAT(FORMAT(ROUND(((p.current_price - ip.initial_price)/ip.initial_price) * 100, 3), 3), '%') AS portfolio_returns
           FROM Performance_Prices p
           JOIN Initial_Prices ip ON ip.account_id = p.account_id
@@ -54,7 +56,7 @@ class Queries:
 
      # Query 4. Total amount invested across all users
      def getTotalAmountInvested(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT CONCAT('$', FORMAT(SUM(p.asset_quantity * ap.price_per_share), 2)) AS total_amount_invested_across_all_portfolios
           FROM Portfolios p
           JOIN Assets a ON p.asset_id = a.asset_id
@@ -63,7 +65,7 @@ class Queries:
 
      # Query 5. The highest amount invested across all portfolios
      def getHighestAmountInvested(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT 
           CONCAT('$', FORMAT(ROUND(MAX(total_portfolio_value), 2), '###,###.##')) AS highest_portfolio_value
           FROM (
@@ -79,7 +81,7 @@ class Queries:
 
      #  Query 6. Divide investors into 4 groups based on the amount of funds they have
      def groupInvestorsByAvailableFunds(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT investor_id, first_name, last_name, funds,
                NTILE(4) OVER (ORDER BY funds DESC) AS fund_quartile
           FROM Investors;
@@ -87,7 +89,7 @@ class Queries:
      
      # Query 7. Investors who have more funds than the average investor
      def investorsWithAboveAverageFunds(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT investor_id, first_name, last_name, funds
           FROM Investors
           WHERE funds > (SELECT AVG(funds) FROM Investors)
@@ -96,7 +98,7 @@ class Queries:
 
      # Query 8. Funds deposited into each investors account by occupation
      def fundsAvailableByOccupation(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT occupation, funds AS total_funds
           FROM Investors
           GROUP BY occupation
@@ -105,7 +107,7 @@ class Queries:
 
      # Query 9. CTE (common table expression) to get total amount of investors' portfolios and rank them based on the total value across all their portfolios
      def rankInvestorPortfolios(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           with Portfoliovalues as ( 
           SELECT 
                account_id, 
@@ -127,7 +129,7 @@ class Queries:
      
      # Advanced query 1. Find the most popular account and the most commonly held asset within that account
      def mostTrendingInvestmentAccount(self):
-          self.connection.executeQuery(f""" 
+          return self.connection.executeQuery(f""" 
           select a_type.account_type, COUNT(*) As count, asst.symbol
           from Accounts a
           join Account_Types a_type on a_type.account_type_id = a.account_type_id
@@ -140,17 +142,18 @@ class Queries:
      
      # Advanced query 2. Most trending buy right now
      def mostTrendingBuy(self):
-          self.connection.executeQuery(f""" 
-          select a.symbol, count(a.asset_id) as count from Carts c
+          return self.connection.executeQuery(f""" 
+          select a.symbol, ap.price_per_share, count(a.asset_id) as "Trade_volume" from Carts c
           join Assets a on a.asset_id = c.asset_id
+          join Asset_Prices ap on ap.asset_id = a.asset_id
           group by a.asset_id
-          order by count desc
+          order by Trade_volume desc
           limit 1;
           """)
      
      # Advanced query 3. City of investors who are making the most transactions
      def cityWithMostTransactions(self):
-          self.connection.executeQuery(f""" 
+          return self.connection.executeQuery(f""" 
           SELECT 
                SUBSTRING_INDEX(SUBSTRING_INDEX(i.home_address, ',', 2), ',', -1) AS city, -- 1st substring_index gives ("street", "city"), 2nd gives ("city")
                COUNT(t.transaction_id) AS transaction_count,
@@ -164,7 +167,7 @@ class Queries:
      
      # Advanced query 4. Number of investors with accounts grouped by age and account_type
      def commonInvestorAccountsByAge(self):
-          self.connection.executeQuery(f"""
+          return self.connection.executeQuery(f"""
           SELECT 
                TIMESTAMPDIFF(YEAR, i.date_of_birth, CURDATE()) AS age, 
                i.date_of_birth,
@@ -227,6 +230,7 @@ class Queries:
           return True
      
      def subtractFundsFromAccount(self, account_id, cost):
+          # Deduct the cost from the Investor's total funds
           self.connection.executeQuery(f"""UPDATE Investors i
                                            JOIN Accounts a ON i.investor_id = a.investor_id
                                            SET i.funds = i.funds - {cost}
@@ -386,6 +390,7 @@ class Connection:
           cursor.execute(query)
           result = cursor.fetchall()
           cursor.close()
+          #return result if result else "No results found"
           return result if result else "No results found"
           return tabulate(result) if result else "No results found"
 
@@ -402,44 +407,13 @@ def main():
 
      queries = Queries(connection) # pass connection object to Queries class
      
-     """      menu = "Select a query to run:\n1. Find all investors to send updates to for when an asset falls below their target_price\n2. (x,y) coordinates for an investor's portfolio so that it can be plotted with Chart.js\n3. The portfolio return for a single portfolio\n4. Total amount invested across all users\n5. Investors who have more funds than the average investor\n'q' to quit"
-          
-          print("==========================================")
-          print("Mock Trading Platform Database Connection")
-          print("==========================================")
-          while True:
-               print(f"{menu.strip()}\n")
-               action = input("Your input: ")
-               if action.lower() == "q":
-                    connection.disconnect()
-                    return
-
-               try:
-                    action = int(action)
-               except ValueError:
-                    print("Invalid input. Please enter a number between 1 and 5.")
-                    continue
-
-               if action == 1:
-                    output = connection.executeQuery(queries.query1())
-               elif action == 2:
-                    output = connection.executeQuery(queries.query2())
-               elif action == 3:
-                    output = connection.executeQuery(queries.query3())
-               elif action == 4:
-                    output = connection.executeQuery(queries.query4())
-               elif action == 5:
-                    output = connection.executeQuery(queries.query5())
-               else:
-                    print("Invalid choice. Please select a number between 1 and 5.")
-                    continue
-     """
 #    output = queries.validateSellOrder(1, 2, 30)
 #    output = connection.executeQuery("select NOW()")
 #    output = connection.executeQuery("select funds from Accounts a join Investors i on i.investor_id = a.investor_id where account_id = 2;")
 #    output = connection.executeQuery(f"""select funds from Investors i join Accounts a on i.investor_id = a.investor_id where a.account_id = 2""")[0]['funds']
-     
-#    print(f"\nOutput:\n{output}\n")
+     #output = queries.cityWithMostTransactions()
+     output = queries.mostTrendingBuy()
+     print(f"\nOutput:\n{output}\n")
      connection.disconnect()
 
 if __name__ == "__main__":
