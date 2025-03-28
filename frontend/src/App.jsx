@@ -1,34 +1,57 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import Research from './components/Research'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [activePage, setActivePage] = useState('research')
+
+  const renderPage = () => {
+    switch (activePage) {
+      case 'home':
+        return <div className="page-container"><h1>Home Page</h1><p>Home page content will go here.</p></div>
+      case 'trade':
+        return <div className="page-container"><h1>Trade Page</h1><p>Trade page content will go here.</p></div>
+      case 'research':
+        return <Research />
+      default:
+        return <Research />
+    }
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className="app-container">
+      <nav className="navbar">
+        <div className="nav-logo">Koinbase</div>
+        <ul className="nav-links">
+          <li 
+            className={activePage === 'home' ? 'active' : ''} 
+            onClick={() => setActivePage('home')}
+          >
+            Home
+          </li>
+          <li 
+            className={activePage === 'trade' ? 'active' : ''} 
+            onClick={() => setActivePage('trade')}
+          >
+            Trade
+          </li>
+          <li 
+            className={activePage === 'research' ? 'active' : ''} 
+            onClick={() => setActivePage('research')}
+          >
+            Research
+          </li>
+        </ul>
+      </nav>
+      
+      <main className="main-content">
+        {renderPage()}
+      </main>
+      
+      <footer className="footer">
+        <p>© 2025 Koinbase - Investment Platform</p>
+      </footer>
+    </div>
   )
 }
 

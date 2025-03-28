@@ -4,15 +4,6 @@ from dotenv import load_dotenv
 from tabulate import tabulate
 load_dotenv()
 
-""" 
-connection = Connection(
-    os.getenv("DB_HOST"),
-    os.getenv("DB_NAME"),
-    os.getenv("DB_USER"),
-    os.getenv("DB_PASSWORD")
-) 
-"""
-
 # TODO: Change code to prevent SQL injection
 
 class Queries:
