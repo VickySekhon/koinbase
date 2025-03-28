@@ -1,18 +1,10 @@
 import mysql.connector
-from mysql.connector import Error
 import os
 from dotenv import load_dotenv
 from tabulate import tabulate
 load_dotenv()
 
-"""
-connection = Connection(
-    os.getenv("DB_HOST"),
-    os.getenv("DB_NAME"),
-    os.getenv("DB_USER"),
-    os.getenv("DB_PASSWORD")
-) 
-"""
+# TODO: Change code to prevent SQL injection
 
 class Queries:
      
@@ -35,11 +27,11 @@ class Queries:
      # Query 2. (x,y) coordinates for an investor's portfolio so that it can be plotted with Chart.js
      def getXYCoordinates(self, account_id):
           return self.connection.executeQuery(f"""
-          select distinct pp.current_price as y,
-               row_number() over (order by p.performance_date asc) as x 
-          from Performances p
-          join Performance_Prices pp on pp.account_id = p.account_id and pp.performance_date = p.performance_date
-          where p.account_id = {account_id};
+          SELECT DISTINCT pp.current_price AS y, ROW_NUMBER() OVER (ORDER BY p.performance_date ASC) AS x 
+          FROM Performances p
+          JOIN Performance_Prices pp ON pp.account_id = p.account_id 
+          AND pp.performance_date = p.performance_date
+          WHERE p.account_id = {account_id};
           """)
      
      # Query 3. The portfolio return for a single portfolio
@@ -142,10 +134,11 @@ class Queries:
      # Advanced query 2. Most trending buy right now
      def mostTrendingBuy(self):
           return self.connection.executeQuery(f""" 
-          select a.symbol, count(a.asset_id) as count from Carts c
+          select a.symbol, ap.price_per_share, count(a.asset_id) as "Trade_volume" from Carts c
           join Assets a on a.asset_id = c.asset_id
+          join Asset_Prices ap on ap.asset_id = a.asset_id
           group by a.asset_id
-          order by count desc
+          order by Trade_volume desc
           limit 1;
           """)
      
@@ -228,7 +221,8 @@ class Queries:
           return True
      
      def subtractFundsFromAccount(self, account_id, cost):
-          return self.connection.executeQuery(f"""UPDATE Investors i
+          # Deduct the cost from the Investor's total funds
+          self.connection.executeQuery(f"""UPDATE Investors i
                                            JOIN Accounts a ON i.investor_id = a.investor_id
                                            SET i.funds = i.funds - {cost}
                                            WHERE a.account_id = {account_id};""");
@@ -237,19 +231,19 @@ class Queries:
           print(f"Account: {account_id} now has a balance of: ${updatedBalance}.")
      
      def addTransactionRecord(self, account_id, asset_id, asset_quantity, transaction_type):
-          return self.connection.executeQuery(f"""
+          self.connection.executeQuery(f"""
           insert into Transactions (account_id, asset_id, asset_quantity, transaction_time, transaction_type)
           VALUES ({account_id}, {asset_id}, {asset_quantity}, NOW(), {transaction_type});
           """)
      
      def removeItemFromCart(self, account_id, asset_id):
-          return self.connection.executeQuery(f"""
+          self.connection.executeQuery(f"""
           delete from Carts
           where account_id = {account_id} and asset_id = {asset_id};
           """)
      
      def updatePortfolioQuantity(self, account_id, asset_id, new_asset_quantity, add: bool):           
-          return self.connection.executeQuery(f"""
+          self.connection.executeQuery(f"""
           INSERT INTO Portfolios (account_id, asset_id, asset_quantity)
           VALUES ({account_id}, {asset_id}, {new_asset_quantity})
           ON DUPLICATE KEY UPDATE 
@@ -257,13 +251,13 @@ class Queries:
           """)
      
      def addNewPerformanceEntry(self, account_id, time=None):
-          return self.connection.executeQuery(f"""
+          self.connection.executeQuery(f"""
           INSERT INTO Performances (account_id, performance_date) 
           ({account_id}, {time if time else "NOW()"})
           """)
           
      def updatePerformancePriceEntry(self, account_id, price_per_share, asset_quantity, add: bool, time=None):
-          return self.connection.executeQuery(f"""          
+          self.connection.executeQuery(f"""          
           INSERT INTO Performance_Prices (account_id, performance_date, current_price) 
           SELECT account_id, {time if time else "NOW()"}, current_price {"+" if add else "-"} ({price_per_share}*{asset_quantity})
           FROM Performance_Prices
@@ -387,6 +381,7 @@ class Connection:
           cursor.execute(query)
           result = cursor.fetchall()
           cursor.close()
+          #return result if result else "No results found"
           return result if result else "No results found"
           return tabulate(result) if result else "No results found"
 
@@ -403,44 +398,13 @@ def main():
 
      queries = Queries(connection) # pass connection object to Queries class
      
-     """      menu = "Select a query to run:\n1. Find all investors to send updates to for when an asset falls below their target_price\n2. (x,y) coordinates for an investor's portfolio so that it can be plotted with Chart.js\n3. The portfolio return for a single portfolio\n4. Total amount invested across all users\n5. Investors who have more funds than the average investor\n'q' to quit"
-          
-          print("==========================================")
-          print("Mock Trading Platform Database Connection")
-          print("==========================================")
-          while True:
-               print(f"{menu.strip()}\n")
-               action = input("Your input: ")
-               if action.lower() == "q":
-                    connection.disconnect()
-                    return
-
-               try:
-                    action = int(action)
-               except ValueError:
-                    print("Invalid input. Please enter a number between 1 and 5.")
-                    continue
-
-               if action == 1:
-                    output = connection.executeQuery(queries.query1())
-               elif action == 2:
-                    output = connection.executeQuery(queries.query2())
-               elif action == 3:
-                    output = connection.executeQuery(queries.query3())
-               elif action == 4:
-                    output = connection.executeQuery(queries.query4())
-               elif action == 5:
-                    output = connection.executeQuery(queries.query5())
-               else:
-                    print("Invalid choice. Please select a number between 1 and 5.")
-                    continue
-     """
 #    output = queries.validateSellOrder(1, 2, 30)
 #    output = connection.executeQuery("select NOW()")
 #    output = connection.executeQuery("select funds from Accounts a join Investors i on i.investor_id = a.investor_id where account_id = 2;")
 #    output = connection.executeQuery(f"""select funds from Investors i join Accounts a on i.investor_id = a.investor_id where a.account_id = 2""")[0]['funds']
-     
-#    print(f"\nOutput:\n{output}\n")
+     #output = queries.cityWithMostTransactions()
+     output = queries.mostTrendingBuy()
+     print(f"\nOutput:\n{output}\n")
      connection.disconnect()
 
 if __name__ == "__main__":
