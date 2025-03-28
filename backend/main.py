@@ -1,8 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-import json
 from mysql_connector import Connection, Queries
 from contextlib import asynccontextmanager
+import json
 
 # Initialize database connection and query executor
 connection = None
