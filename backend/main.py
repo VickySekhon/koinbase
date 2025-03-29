@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from mysql_connector import Connection, Queries
 from contextlib import asynccontextmanager
@@ -50,6 +50,91 @@ app.add_middleware(
 async def root():
     return {"message": "Welcome to Koinbase API", "status": "online"}
 
+
+
+# * Home Page Endpoints *
+@app.get("/investors/name/{investor_id}")
+async def get_investor_name(investor_id: int):
+    result = queries.getInvestorName(investor_id)
+    return format_result(result)
+
+@app.get("/investors/portfolio-value/{account_id}")
+async def get_portfolio_value(account_id: int):
+    result = queries.getPortfolioValue(account_id)
+    return format_result(result)
+
+@app.get("/investors/portfolio-return/{account_id}")
+async def get_portfolio_return(account_id: int):
+    result = queries.getPortfolioReturn(account_id)
+    return format_result(result)
+
+@app.get("/investors/available-funds/{investor_id}")
+async def get_investor_funds(investor_id: int):
+    result = queries.getInvestorFunds(investor_id)
+    return format_result(result)
+
+@app.get("/all-assets")
+async def get_all_assets():
+    result = queries.getAllAssets()
+    return format_result(result)
+
+@app.get("/execute-order/{investorAction}")
+async def execute_order(investorAction: str):
+    # Simulating backend data retrieval
+    body = {
+        "quantity": 12,
+        "action": investorAction,
+        "account_id": "1",
+        "asset_id": 1,
+        "price_per_share": 333.505
+    }
+
+    asset_quantity = body["quantity"]
+    transaction_type = body["action"]
+    account_id = body["account_id"]
+    asset_id = body["asset_id"]
+    price_per_share = body["price_per_share"]
+
+    print(asset_quantity)
+    print(transaction_type)
+    print(asset_id)
+    print(price_per_share)
+    print(account_id)
+
+    if transaction_type == "buy":
+        result = queries.executeBuy(account_id, asset_id, asset_quantity, price_per_share)
+    else:
+        result = queries.executeSell(account_id, asset_id, asset_quantity, price_per_share)
+
+    return {"successfully_completed": result}
+
+# TODO: FIX BACKEND ISSUE WHEN SUBMITTING ORDER
+""" @app.post("/execute-order")
+async def execute_order(request: Request):
+    body = await request.json()
+    print(body)
+    
+    # Accessing dictionary keys with [] notation
+    asset_quantity = body["quantity"]
+    transaction_type = body["action"]
+    account_id = body["account_id"]
+    asset_id = body["asset"][0]["asset_id"]
+    price_per_share = body["asset"][0]["asset_id"]
+    
+    print(asset_quantity)
+    print(transaction_type)
+    print(asset_id)
+    print(price_per_share)
+    print(account_id)
+    
+    if transaction_type == "buy":
+        result = queries.executeBuy(account_id, asset_id, asset_quantity, price_per_share);
+    else:
+        result = queries.executeSell(account_id, asset_id, asset_quantity, price_per_share);
+        
+    return { "successfully_completed": result } """
+
+# * Research Page Endpoints *
 # === Investor Endpoints ===
 @app.get("/investors/quartiles")
 async def get_investors_by_quartile():

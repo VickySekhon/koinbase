@@ -1,27 +1,32 @@
 import { useState } from 'react'
 import Research from './components/Research'
+import Home from './components/Home'
 import './App.css'
+import Trade from './components/Trade'
 
 function App() {
-  const [activePage, setActivePage] = useState('research')
+  const [activePage, setActivePage] = useState('home')
 
   const renderPage = () => {
     switch (activePage) {
       case 'home':
-        return <div className="page-container"><h1>Home Page</h1><p>Home page content will go here.</p></div>
+        return <Home />
       case 'trade':
-        return <div className="page-container"><h1>Trade Page</h1><p>Trade page content will go here.</p></div>
+        return <Trade />
       case 'research':
         return <Research />
       default:
-        return <Research />
+        return <Home />
     }
   }
 
   return (
     <div className="app-container">
       <nav className="navbar">
-        <div className="nav-logo">Koinbase</div>
+        <div className="nav-logo"
+          onClick={() => setActivePage('home')}>
+          Koinbase
+        </div>
         <ul className="nav-links">
           <li 
             className={activePage === 'home' ? 'active' : ''} 

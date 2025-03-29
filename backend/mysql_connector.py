@@ -265,6 +265,28 @@ class Queries:
           ORDER BY performance_date DESC
           LIMIT 1;
           """)
+     
+     def getInvestorName(self, investor_id):
+          return self.connection.executeQuery(f"""select first_name, last_name from Investors where investor_id = {investor_id};""")
+     
+     def getPortfolioValue(self, account_id):
+          return self.connection.executeQuery(f"""
+          SELECT CONCAT('$', FORMAT(SUM(p.asset_quantity * ap.price_per_share), 2)) AS total_portfolio_value
+          FROM Portfolios p
+          JOIN Assets a ON p.asset_id = a.asset_id
+          JOIN Asset_Prices ap ON ap.asset_id = a.asset_id
+          where account_id = {account_id}; 
+          """);
+          
+     def getInvestorFunds(self, investor_id):
+          return self.connection.executeQuery(f"""
+          SELECT CONCAT('$', FORMAT(funds, 2)) AS funds
+          FROM Investors
+          WHERE investor_id = {investor_id};
+          """)
+          
+     def getAllAssets(self):
+          return self.connection.executeQuery(f"""select A.asset_id, A.symbol, E.exchange_symbol, AP.price_per_share from Assets A join Asset_Prices AP on A.asset_id = AP.asset_id join Exchanges E on A.exchange_id = E.exchange_id;""");
 
      def executeBuy(self, account_id, asset_id, asset_quantity, price_per_share, transaction_type="Buy"):
           """
@@ -403,7 +425,7 @@ def main():
 #    output = connection.executeQuery("select funds from Accounts a join Investors i on i.investor_id = a.investor_id where account_id = 2;")
 #    output = connection.executeQuery(f"""select funds from Investors i join Accounts a on i.investor_id = a.investor_id where a.account_id = 2""")[0]['funds']
      #output = queries.cityWithMostTransactions()
-     output = queries.mostTrendingBuy()
+     output = queries.getInvestorName(1)
      print(f"\nOutput:\n{output}\n")
      connection.disconnect()
 
